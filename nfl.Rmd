@@ -2,13 +2,8 @@
 title: "NFL 2018 season: Chicago Bears vs Green Bay Packers"
 subtitle: "Data Visualization (STAT 302)"
 author: "Carolina Costa"
-output:
-  html_document:
-    toc: yes
-    toc_float: yes
-    highlight: "tango"
-editor_options: 
-  chunk_output_type: console
+permalink: /
+layout: default
 ---
 
 <!-- setting global options for knitting -->
