@@ -1,0 +1,252 @@
+---
+title: "NFL 2018 season: Chicago Bears vs Green Bay Packers"
+subtitle: "Data Visualization (STAT 302)"
+author: "Carolina Costa"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    highlight: "tango"
+editor_options: 
+  chunk_output_type: console
+---
+
+<!-- setting global options for knitting -->
+
+```{r global_options, include=FALSE}
+library(knitr)
+opts_chunk$set(warning = FALSE, message = FALSE,
+               dpi = 300)
+```
+
+## Overview
+
+The Chicago Bears and Green Bay Packers have a long standing rivalry in the NFL (National Football League). In recent years, is seems like the Packers have been dominating the rivalry where the Bears continually crack under the pressure. For this project I am interested in analyzing the passing plays of the 2018 NFL season using data obtained from Kaggle (https://www.kaggle.com/competitions/nfl-big-data-bowl-2021/data). Let's see if there is a difference between the Bears and Packers passing game.
+
+## Datasets
+
+The variables should be fairly straightforward, but here is a list with the description of each variable just in case:
+
+-   `unique_id`: Unique play identifier, by combining game_id and play_id
+-   `game_id`: Game identifier, unique
+-   `play_id`: Play identifier, not unique across games
+-   `week`: Week of game
+-   `x_1`: X location of ball at beginning of play
+-   `y_1`: Y location of ball at beginning of play
+-   `x_2`: X location of ball at end of play
+-   `y_2`: Y location of ball at end of play
+-   `event`: Play details of how play ended
+-   `play_description`: Description of play 
+-   `quarter`: Game quarter
+-   `down`: Down
+-   `yards_to_go`: Distance needed for a first down
+-   `possession_team`: Team on offense
+-   `yardline_side`: 3-letter team code corresponding to line-of-scrimmage
+-   `yardline_number`: Yard line at line-of-scrimmage
+-   `game_clock`: Time on clock of play (MM:SS)
+-   `absolute_yardline_number`: Distance from end zone for possession team
+-   `pass_result`: Outcome of the passing play (C: Complete pass, I: Incomplete pass, S: Quarterback sack, IN: Intercepted pass)
+-   `offense_play_result`: Yards gained by the offense, excluding penalty yardage
+-   `play_result`: Net yards gained by the offense, including penalty yardage
+
+<br>
+
+```{r load-packages-data}
+# Load package(s)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(patchwork)
+library(janitor)
+library(grid)
+library(jpeg)
+
+# Load datasets
+nfl <- read_delim(file = "data/nfl_passing_2018.txt", delim = "|")%>%
+  mutate(quarter = factor(quarter, 
+                          levels = c(1,2,3,4,5),
+                          labels =  list("Q1","Q2","Q3","Q4","OT")))%>%
+  mutate(possession_team = factor(possession_team,
+                                  levels = list("CHI","GB"),
+                                  labels = list("Bears","Packers")))
+  
+```
+
+<br>
+
+### Distribution of pass attempts
+
+Let's begin by looking at the distribution of pass attempts during the entire 2018 season for both teams.
+
+<br>
+
+```{r, fig.width=8 , fig.height= 4}
+
+nfl_chi <- nfl %>%
+  filter(possession_team == "Bears")
+
+nfl_gb <- nfl %>%
+  filter(possession_team == "Packers")
+  
+p1 <- ggplot(data = nfl_chi, aes(x = pass_result))+
+  geom_bar(color = "#C83803", fill = "#0B162A", alpha =  0.75, size = 4)+
+  ggtitle("Chicago Bears")+
+  scale_x_discrete(labels = c("Complete", "Incomplete", "Interception", "Sack"))+
+  ylim(0, 400)+
+    annotate("text",
+           x = 4,
+           y = 350,
+           label = "60.7% successful\npass completion",
+           color = "#C83803",
+           hjust = 1,
+           vjust = 1)+
+  theme_minimal()+
+  theme( axis.title.x = element_blank(),
+         axis.title.y = element_blank(),
+         title = element_text(color ="#C83803" ))
+#p1
+
+
+p2 <- ggplot(data = nfl_gb, aes(x = pass_result))+
+  geom_bar(color = "#FFB612", fill = "#203731", alpha =  0.75, size = 4)+
+  ggtitle("Green Bay Packers")+
+  scale_x_discrete(labels = c("Complete", "Incomplete", "Interception", "Sack"))+
+  ylim(0, 400)+
+  annotate("text",
+           x = 4,
+           y = 350,
+           label = "55.4% successful\npass completion",
+           color = "#FFB612",
+           hjust = 1,
+           vjust = 1)+
+  theme_minimal()+
+  theme( axis.title.x = element_blank(),
+         axis.title.y = element_blank(),
+         title = element_text(color ="#FFB612" ))
+#p2
+
+```
+
+```{r}
+patch <- p1 | p2
+
+patch +
+  plot_annotation(title = 'Total Pass Attempt Output During the 2018 Season') &
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+<br>
+
+In general the distribution of passes was similar between both teams. The Chicago Bear had a greater percentage of successful passes than the Green Bay Packers. This pattern is probably due to the increased number of incomplete and sack passes by the Green Bay Packers. However, overall, the Green Bay Packers had more total pass attempt than the Chicago Bears.  
+
+<br>
+
+
+### Completed pass attempts
+
+Now, considering only the completed pass attempts let's look at the distribution of the offensive play result (ie: excluding penalties) across quarters.
+
+<br>
+```{r, fig.width=8 , fig.height= 4, fig.align='center'}
+
+nfl %>%
+  filter(pass_result == "C")%>%
+  ggplot(aes(quarter,offense_play_result))+
+  stat_boxplot(geom = "errorbar", width = 0.2)+
+  geom_boxplot(varwidth = TRUE)+
+  scale_y_continuous(labels = scales::unit_format(unit = "yd"))+
+  facet_wrap(~possession_team)+
+  labs(title = "Distribution of Completed Pass Attempts",
+       subtitle = "2018 Season",
+       y = NULL, 
+       x = "Quarter")+
+  theme_bw()+
+  theme(plot.title = element_text(face = "bold"),
+        axis.title.x = element_text(face = "bold"),
+        strip.text.x = element_text(face = "bold"),
+        panel.grid.major.x = element_blank())
+
+```
+
+
+<br>
+
+The average pass completion distance across game time for both teams is around 10 yds.In general the packers seem to have completed passes with longer distances than the bears. Except for Q2 since 75% of the bears completed passes were around 19 yds and 75% of the packers completed passes were around 15 yds.  
+
+<br><br>
+
+
+### On the field
+
+It would be useful to visualize the pass attempts for the Bears and Packers on the field. This will show us if the quarterback favors a side, typical field position, what types of passes are generally missed, passing touchdowns, etc.
+
+This was the game between the Packers vs Bears on September 9, 2018, where the Packers came back to win 24 to 23 over the Bears. Typically, during the game teams play in both directions (right and left). In order to improve interpretability of the graphic, the coordinates were pre-wrangled and mirrored such that the Bears are always attacking `right` towards the `Bears` endzone and Packers are always attacking `left` towards the `Packers` endzone.
+
+
+```{r, fig.height=7 , fig.width=7}
+# load nflfield image and store it as a variable called "field"
+field <- rasterGrob(readJPEG(source = "data/nflfield.jpg"),
+                    width = unit(1, "npc"), 
+                    height = unit(1, "npc"))
+
+base <- ggplot(data = nfl) +
+  #place the field at the graph grid and put the bears and packers labels
+  annotation_custom(
+    grob = field,
+    xmin = 0, xmax = 120,
+    ymin = 0, ymax = 53.3
+  ) +
+  coord_fixed() +
+  xlim(0, 120) +
+  ylim(0, 53.3)+
+  geom_text( x = 115,
+             y = 26.65,
+             label = "BEARS",
+             color = "#C83803",
+             size = 8,
+             angle = -90,
+             fontface = "bold")+
+    geom_text(x = 5,
+             y = 26.65,
+             label = "PACKERS",
+             color = "black",
+             size = 8,
+             angle = 90,
+             fontface = "bold")
+
+#filter nfl data so there are only passes from the game on September 9, 2018.
+wk1 <- nfl %>%
+  filter(week == 1)
+  
+base +
+  geom_point(data = wk1, aes(x = x_1 , y = y_1, color = pass_result),size = 3)+
+  geom_point(data = wk1, aes(x = x_2 , y = y_2, color = pass_result, shape = pass_result), size = 3)+
+  scale_color_manual(labels = c("complete", "incomplete", "interception", "sack"),
+                     values = c("black","red", "#FFB612","gray"))+
+  scale_shape_manual(labels = c("complete", "incomplete", "interception", "sack"),
+                     values = c(18,13,17,15))+
+  geom_segment(data = wk1,aes(x = x_1, y = y_1, xend = x_2, yend = y_2, color = pass_result))+
+  facet_wrap(~possession_team, 
+             ncol = 1)+
+  labs(title = "Pass Attempts for Bears (top) and Packers (bottom)",
+       subtitle = "Game 1: September 9, 2018")+
+  theme_void()+
+  theme(axis.title = element_blank(),
+        legend.direction = 'horizontal',
+        legend.background = element_blank(),
+        legend.title = element_blank(),
+        legend.position = 'bottom',
+        strip.text.x = element_blank(),
+        plot.title = element_text(face = "bold"))
+```
+
+The graph shows 3 packer passes that were completed in the packers endzone while the bear completed none on her endzone. The number of incomplete passes were also higher for the bears than he packers. But the bears were able to make he one and only passes interception of the game. 
+
+<br>
+
+### Conclusion
+
+Overall the packers had a stronger game than the bears. From the first graph, we can see that despite the bears having a larger percent of successfully completed passes, the packers had more attempted passes overall and a higher number of completed passes. From the second graph, we can also see that the packers completed passes were generally longer than the bears. From the last graph,  we can see that on the september 9th,2018 game three of the packers successful passes were finished on the packers endzone and none of the bears passes were completed in the endzone.Therefore from the data it looks like the packers were a stronger team overall.
+
+
+
